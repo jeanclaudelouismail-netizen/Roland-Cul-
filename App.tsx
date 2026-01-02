@@ -59,33 +59,33 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen max-w-3xl mx-auto border-x border-stone-800 dirty-gradient shadow-2xl relative overflow-hidden">
+    <div className="flex flex-col h-[100dvh] max-w-3xl mx-auto border-x border-stone-800 dirty-gradient shadow-2xl relative overflow-hidden">
       {/* Header */}
       <header className="p-4 border-b border-stone-800 flex items-center justify-between bg-stone-900/50 backdrop-blur-sm z-10">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-stone-700 rounded-full border-2 border-green-900/50 overflow-hidden relative">
+          <div className="w-12 h-12 bg-stone-700 rounded-full border-2 border-green-900/50 overflow-hidden relative shrink-0">
              <img src="https://picsum.photos/seed/disgusting/200" alt="Avatar" className="opacity-60 grayscale hover:grayscale-0 transition-all duration-1000" />
              <div className="absolute inset-0 bg-green-900/20 mix-blend-multiply"></div>
           </div>
           <div>
-            <h1 className="text-xl font-bold text-stone-100 tracking-tighter" style={{ fontFamily: 'Creepster, cursive' }}>
+            <h1 className="text-xl font-bold text-stone-100 tracking-tighter leading-none" style={{ fontFamily: 'Creepster, cursive' }}>
               L'ABJECT CRITIC
             </h1>
-            <p className="text-[10px] text-green-700 font-bold animate-pulse">STATUT: SALE & INFECT</p>
+            <p className="text-[10px] text-green-700 font-bold animate-pulse mt-1">STATUT: SALE & INFECT</p>
           </div>
         </div>
         <StinkLines />
       </header>
 
       {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-stone-800">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-stone-800 pb-8">
         {messages.map((msg) => (
           <div 
             key={msg.id} 
             className={`flex ${msg.sender === Sender.USER ? 'justify-end' : 'justify-start'}`}
           >
             <div 
-              className={`max-w-[85%] p-3 border ${
+              className={`max-w-[88%] p-3 border ${
                 msg.sender === Sender.USER 
                   ? 'bg-stone-800 border-stone-700 text-stone-200' 
                   : 'bg-stone-950/80 border-stone-800 text-stone-100 italic toxic-glow'
@@ -109,25 +109,26 @@ const App: React.FC = () => {
       </div>
 
       {/* Input Area */}
-      <div className="p-4 bg-stone-900 border-t border-stone-800 z-10">
-        <div className="flex gap-2 bg-stone-950 border border-stone-800 p-1 focus-within:border-green-900/50 transition-colors">
+      <div className="p-4 bg-stone-900 border-t border-stone-800 z-10 pb-safe">
+        <div className="flex gap-2 bg-stone-950 border border-stone-800 p-1 focus-within:border-green-900/50 transition-colors rounded-sm">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Dis quelque chose de stupide..."
-            className="flex-1 bg-transparent border-none outline-none text-stone-200 p-2 text-sm placeholder:text-stone-700"
+            placeholder="Dis un truc, déchet..."
+            className="flex-1 bg-transparent border-none outline-none text-stone-200 p-2 text-base placeholder:text-stone-700"
+            style={{ fontSize: '16px' }} /* Évite le zoom auto sur iPhone */
           />
           <button
             onClick={handleSend}
             disabled={isLoading || !input.trim()}
-            className="px-4 py-2 bg-stone-800 hover:bg-stone-700 disabled:bg-stone-900 disabled:text-stone-800 text-stone-400 font-bold text-xs border border-stone-700 transition-all uppercase"
+            className="px-4 py-2 bg-stone-800 hover:bg-stone-700 active:scale-95 disabled:bg-stone-900 disabled:text-stone-800 text-stone-400 font-bold text-xs border border-stone-700 transition-all uppercase rounded-sm"
           >
             {isLoading ? '...' : 'Insulter'}
           </button>
         </div>
-        <p className="text-[9px] text-stone-700 mt-2 text-center uppercase tracking-widest">
+        <p className="text-[9px] text-stone-700 mt-2 text-center uppercase tracking-widest hidden sm:block">
           Appuyez sur ENTRÉE pour recevoir votre dose de mépris
         </p>
       </div>
