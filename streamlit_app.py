@@ -5,9 +5,13 @@ import google.generativeai as genai
 st.set_page_config(page_title="Roland Culé", page_icon="⚽")
 
 # 1. Récupération sécurisée de la clé API
-try:
+if "GOOGLE_API_KEY" not in st.secrets:
+    st.error("⚠️ La clé 'GOOGLE_API_KEY' n'est pas configurée dans les Secrets de Streamlit.")
+else:
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
+    
+    # Utilisation explicite du modèle stable 1.5-flash
     model = genai.GenerativeModel('gemini-1.5-flash')
 
     st.title("⚽ Roland Culé")
@@ -19,11 +23,12 @@ try:
     if st.button("Demander à Roland"):
         if user_input:
             with st.spinner('Roland réfléchit...'):
-                response = model.generate_content(user_input)
-                st.markdown("### Réponse de Roland :")
-                st.write(response.text)
+                try:
+                    # Ajout d'une gestion d'erreur spécifique à la génération
+                    response = model.generate_content(user_input)
+                    st.markdown("### Réponse de Roland :")
+                    st.write(response.text)
+                except Exception as e:
+                    st.error(f"Désolé, Roland a eu un problème technique : {e}")
         else:
             st.warning("Écris quelque chose avant de valider !")
-
-except KeyError:
-    st.error("⚠️ La clé 'GOOGLE_API_KEY' n'est pas configurée dans les Secrets de Streamlit.")
