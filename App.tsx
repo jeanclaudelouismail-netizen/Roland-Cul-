@@ -9,13 +9,17 @@ const App: React.FC = () => {
     {
       id: 'init',
       sender: Sender.AI,
-      text: "Qu'est-ce que tu veux encore, espèce de sous-merde ? T'as l'air aussi pathétique que l'odeur de mon aisselle gauche.",
+      text: "Qu'est-ce que tu veux encore, espèce de sous-merde ? T'as l'air aussi pathétique que l'odeur de mon aisselle gauche. Je suis Roland Culé, et ta présence m'irrite déjà.",
       timestamp: new Date()
     }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Note: 'avatar.png' refers to the image you provided. 
+  // For the preview, we use a source that mimics the style.
+  const avatarUrl = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1974&auto=format&fit=crop";
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -59,19 +63,27 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] max-w-3xl mx-auto border-x border-stone-800 dirty-gradient shadow-2xl relative overflow-hidden">
+    <div className="flex flex-col h-[100dvh] max-w-3xl mx-auto border-x border-stone-800 dirty-gradient shadow-2xl relative overflow-hidden font-sans">
       {/* Header */}
-      <header className="p-4 border-b border-stone-800 flex items-center justify-between bg-stone-900/50 backdrop-blur-sm z-10">
+      <header className="p-4 border-b border-stone-800 flex items-center justify-between bg-stone-900/80 backdrop-blur-md z-10">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-stone-700 rounded-full border-2 border-green-900/50 overflow-hidden relative shrink-0">
-             <img src="https://picsum.photos/seed/disgusting/200" alt="Avatar" className="opacity-60 grayscale hover:grayscale-0 transition-all duration-1000" />
-             <div className="absolute inset-0 bg-green-900/20 mix-blend-multiply"></div>
+          <div className="avatar-container w-14 h-14 bg-stone-800 rounded-full border-2 border-green-900/40 overflow-hidden relative shrink-0 shadow-[0_0_10px_rgba(0,0,0,0.5)]">
+             <img 
+              src={avatarUrl} 
+              alt="Roland Culé" 
+              className="avatar-sepia w-full h-full object-cover" 
+              onError={(e) => {
+                // Fallback to a placeholder if the local avatar.png isn't found yet
+                (e.target as HTMLImageElement).src = "https://picsum.photos/seed/roland/200";
+              }}
+            />
+             <div className="absolute inset-0 bg-green-900/10 mix-blend-color"></div>
           </div>
           <div>
-            <h1 className="text-xl font-bold text-stone-100 tracking-tighter leading-none" style={{ fontFamily: 'Creepster, cursive' }}>
-              L'ABJECT CRITIC
+            <h1 className="text-2xl font-bold text-stone-100 tracking-tighter leading-none" style={{ fontFamily: 'Creepster, cursive' }}>
+              ROLAND CULÉ
             </h1>
-            <p className="text-[10px] text-green-700 font-bold animate-pulse mt-1">STATUT: SALE & INFECT</p>
+            <p className="text-[9px] text-green-600 font-black animate-pulse mt-1 tracking-[0.3em] uppercase">Statut : Infect & Précis</p>
           </div>
         </div>
         <StinkLines />
@@ -85,22 +97,23 @@ const App: React.FC = () => {
             className={`flex ${msg.sender === Sender.USER ? 'justify-end' : 'justify-start'}`}
           >
             <div 
-              className={`max-w-[88%] p-3 border ${
+              className={`max-w-[88%] p-3.5 border ${
                 msg.sender === Sender.USER 
                   ? 'bg-stone-800 border-stone-700 text-stone-200' 
-                  : 'bg-stone-950/80 border-stone-800 text-stone-100 italic toxic-glow'
-              } shadow-lg`}
+                  : 'bg-stone-950/90 border-stone-800 text-stone-50 toxic-glow'
+              } shadow-xl rounded-sm`}
             >
               {msg.sender === Sender.AI && (
-                <div className="text-[10px] uppercase font-bold text-stone-600 mb-1 border-b border-stone-900 pb-1">
-                  Le Détritus Suprême
+                <div className="text-[10px] uppercase font-black text-stone-600 mb-1.5 border-b border-stone-900 pb-1 tracking-widest flex justify-between items-center">
+                  <span>Roland</span>
+                  <span className="text-[8px] text-green-900/50">● EN LIGNE</span>
                 </div>
               )}
-              <div className="whitespace-pre-wrap leading-relaxed text-sm">
+              <div className="whitespace-pre-wrap leading-relaxed text-[15px] font-medium tracking-tight">
                 {msg.text || (isLoading && msg.sender === Sender.AI ? '...' : '')}
               </div>
-              <div className="mt-2 text-[8px] text-stone-600 text-right uppercase">
-                {msg.timestamp.toLocaleTimeString()}
+              <div className="mt-2 text-[9px] text-stone-700 text-right font-bold tabular-nums">
+                {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
           </div>
@@ -109,32 +122,33 @@ const App: React.FC = () => {
       </div>
 
       {/* Input Area */}
-      <div className="p-4 bg-stone-900 border-t border-stone-800 z-10 pb-safe">
-        <div className="flex gap-2 bg-stone-950 border border-stone-800 p-1 focus-within:border-green-900/50 transition-colors rounded-sm">
+      <div className="p-4 bg-stone-900/90 border-t border-stone-800 z-10 pb-safe backdrop-blur-sm">
+        <div className="flex gap-2 bg-stone-950 border border-stone-800 p-1.5 focus-within:border-green-900/50 transition-colors rounded-md shadow-2xl">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Dis un truc, déchet..."
-            className="flex-1 bg-transparent border-none outline-none text-stone-200 p-2 text-base placeholder:text-stone-700"
-            style={{ fontSize: '16px' }} /* Évite le zoom auto sur iPhone */
+            placeholder="Parle à mon cul, ma tête est malade..."
+            className="flex-1 bg-transparent border-none outline-none text-stone-100 px-2 py-1 text-base placeholder:text-stone-800"
+            style={{ fontSize: '16px' }}
           />
           <button
             onClick={handleSend}
             disabled={isLoading || !input.trim()}
-            className="px-4 py-2 bg-stone-800 hover:bg-stone-700 active:scale-95 disabled:bg-stone-900 disabled:text-stone-800 text-stone-400 font-bold text-xs border border-stone-700 transition-all uppercase rounded-sm"
+            className="px-5 py-2 bg-stone-800 hover:bg-stone-700 active:scale-95 disabled:bg-stone-900 disabled:text-stone-900 text-stone-400 font-bold text-xs border border-stone-700 transition-all uppercase rounded-sm"
           >
-            {isLoading ? '...' : 'Insulter'}
+            {isLoading ? '...' : 'Cracher'}
           </button>
         </div>
-        <p className="text-[9px] text-stone-700 mt-2 text-center uppercase tracking-widest hidden sm:block">
-          Appuyez sur ENTRÉE pour recevoir votre dose de mépris
+        <p className="text-[8px] text-stone-800 mt-2 text-center uppercase tracking-[0.4em] font-bold">
+          Dernière douche : Janvier 2022
         </p>
       </div>
 
       {/* Overlay background effects */}
-      <div className="absolute inset-0 pointer-events-none opacity-5 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+      <div className="absolute inset-0 pointer-events-none opacity-[0.04] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
+      <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]"></div>
     </div>
   );
 };

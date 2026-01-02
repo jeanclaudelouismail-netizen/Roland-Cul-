@@ -4,25 +4,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>L'Abject Critic</title>
+    <title>Roland Culé - L'Abject Critic</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0c0a09">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://picsum.photos/seed/disgusting/192">
+    <link rel="apple-touch-icon" href="avatar.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Creepster&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Creepster&display=swap');
         
         body {
             background-color: #0c0a09;
             color: #d6d3d1;
-            font-family: 'Courier Prime', monospace;
-            overscroll-behavior-y: contain; /* Empêche le "pull-to-refresh" sur mobile */
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior-y: contain;
         }
 
         .toxic-glow {
-            box-shadow: 0 0 15px rgba(34, 197, 94, 0.2);
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.15);
         }
 
         .dirty-gradient {
@@ -43,6 +43,25 @@
             background: rgba(34, 197, 94, 0.3);
             filter: blur(2px);
             animation: drift 3s infinite ease-in-out;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0c0a09;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #292524;
+        }
+
+        .avatar-sepia {
+            filter: grayscale(0.4) contrast(1.2) brightness(0.8);
+            transition: all 0.5s ease;
+        }
+        .avatar-container:hover .avatar-sepia {
+            filter: grayscale(0) contrast(1.1) brightness(1);
         }
     </style>
 <script type="importmap">

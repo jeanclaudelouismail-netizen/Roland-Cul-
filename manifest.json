@@ -1,15 +1,15 @@
 
 {
-  "short_name": "AbjectCritic",
-  "name": "L'Abject Critic - IA Détestable",
+  "short_name": "RolandCulé",
+  "name": "Roland Culé - L'Abject",
   "icons": [
     {
-      "src": "https://picsum.photos/seed/disgusting/192",
+      "src": "avatar.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "https://picsum.photos/seed/disgusting/512",
+      "src": "avatar.png",
       "type": "image/png",
       "sizes": "512x512"
     }
