@@ -72,15 +72,17 @@ export class GeminiService {
 
   async generateSpeech(text: string): Promise<string | undefined> {
     try {
-      // On demande explicitement une élocution rapide et nerveuse pour augmenter la cadence
+      // On insiste sur le côté grave, roque et rapide. 
+      // L'utilisation de termes comme "voix d'outre-tombe" ou "caverneuse" aide à baisser le pitch perçu.
       const response = await this.ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text: `Parle TRÈS VITE, d'un ton sec, nerveux, éméché et extrêmement méprisant. Ne traîne pas sur les mots, dépêche-toi d'insulter : ${text}` }] }],
+        contents: [{ parts: [{ text: `Parle TRÈS VITE avec une voix TRÈS GRAVE, caverneuse, roque, éméchée et extrêmement méprisante. D'un ton sec et bas : ${text}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
             voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: 'Puck' },
+              // Fenrir a généralement un timbre plus bas et plus imposant que Puck.
+              prebuiltVoiceConfig: { voiceName: 'Fenrir' },
             },
           },
         },
