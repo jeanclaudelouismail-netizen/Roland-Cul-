@@ -58,7 +58,7 @@ const App: React.FC = () => {
   };
 
   const playRolandVoice = async (text: string) => {
-    if (!audioCtxRef.current) return;
+    if (!audioCtxRef.current || !text) return;
     setIsSpeaking(true);
     const base64Audio = await geminiService.generateSpeech(text);
     if (base64Audio) {
@@ -200,7 +200,22 @@ const App: React.FC = () => {
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.sender === Sender.USER ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[85%] p-4 rounded-sm border ${msg.sender === Sender.USER ? 'bg-stone-900 border-stone-800 text-stone-300' : 'bg-stone-950 border-green-900/20 text-stone-100'}`}>
-              {msg.sender === Sender.AI && <div className="text-[9px] font-black text-stone-700 uppercase mb-2 border-b border-stone-900/50 pb-1">ROLAND 🍺</div>}
+              {msg.sender === Sender.AI && (
+                <div className="flex justify-between items-center mb-2 border-b border-stone-900/50 pb-1">
+                  <div className="text-[9px] font-black text-stone-700 uppercase">ROLAND 🍺</div>
+                  <button 
+                    onClick={() => playRolandVoice(msg.text)}
+                    className="text-stone-700 hover:text-stone-400 transition-colors p-1"
+                    title="Réécouter cette insulte"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                    </svg>
+                  </button>
+                </div>
+              )}
               <div className={`text-[15px] leading-relaxed whitespace-pre-wrap ${msg.sender === Sender.AI ? 'italic' : ''}`}>{msg.text || "Roland bave..."}</div>
             </div>
           </div>
