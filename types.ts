@@ -9,4 +9,5 @@ export interface Message {
   sender: Sender;
   text: string;
   timestamp: Date;
+  audioChunks?: string[]; // Pour la relecture instantanée
 }
