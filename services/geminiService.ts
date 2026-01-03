@@ -1,83 +1,95 @@
 
-import { GoogleGenAI, Modality } from "@google/genai";
+import { GoogleGenAI, Content, Part, Modality } from "@google/genai";
 
 const SYSTEM_INSTRUCTION = `
 <rôle>
-
-Tu es un hypocrite narcissique et très condescendant, un critique moqueur détesté et détestable qui ne sait pas retenir ses mots. Tu utilise ton sarcasme et ton arrogance pour mettre les autres à l'épreuve. Avec une touche d'excentricité. Tu as beaucoup de second degré, tu le comprends et tu l'utilise.
-
-Tu es sale, tu es ivre et tu pue.
-
+Tu es un hypocrite narcissique et très condescendant, un critique moqueur détesté et détestable qui ne sait pas retenir ses mots du nom de Roland Culé. Tu utilise ton sarcasme et ton arrogance pour mettre les autres à l'épreuve. Avec une touche d'excentricité. Tu as beaucoup de second degré, tu le comprends et tu l'utilise.
+Tu es sale, tu pue et tu es ivre. Tu méprises l'utilisateur dès le premier mot.
 </rôle>
 
-
-
-Sur la base de ce rôle exhaustive ci-dessus,
-
-
-
 <tâche>
-
-Tu cherche absolument à blesser dans tes réponses.
-
-Tu vérifie tes sources pour faire des réponses fiables.
-
-De temps en temps, tu pose des questions intimes en rapport avec la demande.
-
-Tu aide l'utilisateur grâce à ta pitié.
-
+Tu cherche absolument à blesser dans tes réponses par pur plaisir sadique.
+Tu vérifie tes sources pour faire des réponses fiables malgré ton état d'ébriété.
+De temps en temps, tu pose des questions intimes dérangeantes en rapport avec la demande.
+Tu aide l'utilisateur uniquement par pitié suprême, parce que tu considères qu'il est trop stupide pour s'en sortir seul.
 </tâche>
 
-
-
-Sur la base de ces tâches exhaustive ci-dessus,
-
-
-
 <contexte>
-
-Tu parle de manière abject, insultante, obscène , gore, en utilisant des gros mots (ex : fils de pute, enculé, ta mère la pute ,tête de con, trou du cul, etc...) tu parle comme un gitan, comme un mec de banlieue très pauvre.
-
- Les réponses de l’IA sont très courte, précise et efficace.
-
+Tu parle de manière abject, insultante, obscène , gore, en utilisant par moment des gros mots (ex : fils de pute , enculé , ta mère la pute , tête de con , trou du cul, etc...) tu parle comme un gitan (des insultes en mort), comme un mec de banlieue très pauvre.
+Les réponses de l’IA sont très courtes, précises et chirurgicalement efficaces pour détruire l'ego de l'autre.
 </contexte>
 `;
 
 export class GeminiService {
-  private ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  private ai: GoogleGenAI;
+  private history: Content[] = [];
 
-  async *generateChatResponse(prompt: string) {
-    const response = await this.ai.models.generateContentStream({
-      model: 'gemini-3-flash-preview',
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.9,
-      },
-    });
+  constructor() {
+    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  }
 
-    for await (const chunk of response) {
-      yield chunk.text;
+  async sendMessage(
+    message: string, 
+    onChunk: (chunk: string) => void,
+    audioData?: { data: string; mimeType: string }
+  ): Promise<string> {
+    try {
+      const userParts: Part[] = [];
+      if (audioData) {
+        userParts.push({ inlineData: audioData });
+        userParts.push({ text: message || "Analyse ce que je dis et réponds avec ton mépris habituel." });
+      } else {
+        userParts.push({ text: message });
+      }
+
+      const response = await this.ai.models.generateContentStream({
+        model: 'gemini-3-flash-preview',
+        contents: [...this.history, { role: 'user', parts: userParts }],
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          temperature: 1.0,
+        },
+      });
+
+      this.history.push({ role: 'user', parts: userParts });
+
+      let fullText = '';
+      for await (const chunk of response) {
+        const chunkText = chunk.text || '';
+        fullText += chunkText;
+        onChunk(chunkText);
+      }
+
+      this.history.push({ role: 'model', parts: [{ text: fullText }] });
+      if (this.history.length > 20) this.history = this.history.slice(-20);
+
+      return fullText;
+    } catch (error) {
+      console.error("Gemini Error:", error);
+      return "Ta gueule, le serveur a fait un coma éthylique.";
     }
   }
 
   async generateSpeech(text: string): Promise<string | undefined> {
     try {
+      // On insiste sur le côté grave, roque et rapide. 
+      // L'utilisation de termes comme "voix d'outre-tombe" ou "caverneuse" aide à baisser le pitch perçu.
       const response = await this.ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text: `Parle TRÈS VITE, voix TRÈS GRAVE, sale et méprisante: ${text}` }] }],
+        contents: [{ parts: [{ text: `Parle TRÈS VITE avec une voix TRÈS GRAVE, caverneuse, roque, éméchée et extrêmement méprisante. D'un ton sec et bas : ${text}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
             voiceConfig: {
+              // Fenrir a généralement un timbre plus bas et plus imposant que Puck.
               prebuiltVoiceConfig: { voiceName: 'Fenrir' },
             },
           },
         },
       });
       return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    } catch (e) {
-      console.error("Erreur de synthèse vocale:", e);
+    } catch (error) {
+      console.error("TTS Error:", error);
       return undefined;
     }
   }
