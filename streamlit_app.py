@@ -4,16 +4,25 @@ import google.generativeai as genai
 st.set_page_config(page_title="Roland Culé", page_icon="⚽")
 
 if "GOOGLE_API_KEY" not in st.secrets:
-    st.error("⚠️ La clé 'GOOGLE_API_KEY' n'est pas configurée dans les Secrets.")
+    st.error("⚠️ Clé manquante dans les Secrets.")
 else:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
     
-    # On utilise le modèle le plus stable et compatible
-    model = genai.GenerativeModel('gemini-pro')
+    # ÉTAPE DE DÉTECTION AUTOMATIQUE
+    try:
+        # On cherche un modèle qui supporte la génération de contenu
+        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        if available_models:
+            # On prend le premier modèle disponible (souvent gemini-1.5-flash ou pro)
+            model_name = available_models[0]
+            model = genai.GenerativeModel(model_name)
+        else:
+            st.error("Aucun modèle n'est disponible pour cette clé API.")
+    except Exception as e:
+        st.error(f"Erreur lors de la récupération des modèles : {e}")
 
     st.title("⚽ Roland Culé")
-    st.write("Pose-moi tes questions !")
-
+    
     user_input = st.text_input("Ta question :")
 
     if st.button("Demander à Roland"):
@@ -21,9 +30,6 @@ else:
             with st.spinner('Roland réfléchit...'):
                 try:
                     response = model.generate_content(user_input)
-                    st.markdown("### Réponse de Roland :")
                     st.write(response.text)
                 except Exception as e:
-                    st.error(f"Erreur : {e}")
-        else:
-            st.warning("Écris quelque chose !")
+                    st.error(f"Erreur finale : {e}")
