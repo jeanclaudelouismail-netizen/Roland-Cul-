@@ -1,31 +1,27 @@
 import streamlit as st
 import google.generativeai as genai
 
-# Configuration de l'interface
-st.set_page_config(page_title="Roland Culé", page_icon="⚽")
+# C'est ici que tu colles ton travail de Google Studio (Ton Prompt)
+SYSTEM_PROMPT = """
+COLLE ICI TON TEXTE DE GOOGLE STUDIO
+"""
+
+st.set_page_config(page_title="Roland Culé")
+genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+
+# Initialisation du modèle avec TES réglages de Google Studio
+model = genai.GenerativeModel(
+    model_name='gemini-1.5-flash',
+    system_instruction=SYSTEM_PROMPT
+)
+
 st.title("⚽ Roland Culé")
-st.write("L'assistant IA qui ne fait pas de cadeaux.")
 
-# Vérification de la clé
-if "GOOGLE_API_KEY" not in st.secrets:
-    st.error("⚠️ La clé API est manquante dans les Secrets Streamlit.")
-else:
-    # Configuration de l'IA
-    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+if prompt := st.chat_input("Pose ta question..."):
+    with st.chat_message("user"):
+        st.write(prompt)
     
-    # On utilise le nom technique complet pour éviter l'erreur 404
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
-
-    # Champ de saisie
-    user_input = st.text_input("Pose ta question :")
-
-    if st.button("Demander à Roland"):
-        if user_input:
-            try:
-                response = model.generate_content(user_input)
-                st.markdown("### Réponse :")
-                st.write(response.text)
-            except Exception as e:
-                st.error(f"Erreur technique : {e}")
-        else:
-            st.warning("Écris quelque chose !")
+    response = model.generate_content(prompt)
+    
+    with st.chat_message("assistant"):
+        st.write(response.text)
