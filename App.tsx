@@ -4,151 +4,229 @@ import { Sender, Message } from './types';
 import { geminiService } from './services/geminiService';
 import { StinkLines } from './components/StinkLines';
 
+// Audio decoding helpers
+function decodeBase64(base64: string) {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function decodeAudioData(data: Uint8Array, ctx: AudioContext): Promise<AudioBuffer> {
+  const dataInt16 = new Int16Array(data.buffer);
+  const buffer = ctx.createBuffer(1, dataInt16.length, 24000);
+  const channelData = buffer.getChannelData(0);
+  for (let i = 0; i < dataInt16.length; i++) {
+    channelData[i] = dataInt16[i] / 32768.0;
+  }
+  return buffer;
+}
+
+const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
 const App: React.FC = () => {
+  const [isStarted, setIsStarted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'init',
       sender: Sender.AI,
-      text: "Qu'est-ce que tu veux encore, espèce de sous-merde ? T'as l'air aussi pathétique que l'odeur de mon aisselle gauche. Je suis Roland Culé, et ta présence m'irrite déjà.",
+      text: "Qu'est-ce que tu me veux encore, face de rat ? Tu viens admirer mon génie ou tu cherches juste à te faire humilier ? Je suis Roland Culé, et ton existence est une erreur de la nature. *Rote violemment*",
       timestamp: new Date()
     }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Note: 'avatar.png' refers to the image you provided. 
-  // For the preview, we use a source that mimics the style.
-  const avatarUrl = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1974&auto=format&fit=crop";
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
-
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      sender: Sender.USER,
-      text: input,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
-    setIsLoading(true);
-
-    const aiMsgId = (Date.now() + 1).toString();
-    const aiMsg: Message = {
-      id: aiMsgId,
-      sender: Sender.AI,
-      text: '',
-      timestamp: new Date()
-    };
-    
-    setMessages(prev => [...prev, aiMsg]);
-
-    let accumulatedText = '';
-    await geminiService.sendMessage(input, (chunk) => {
-      accumulatedText += chunk;
-      setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: accumulatedText } : m));
-    });
-
-    setIsLoading(false);
+  const handleStart = () => {
+    audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    setIsStarted(true);
   };
 
+  const playRolandVoice = async (text: string) => {
+    if (!audioCtxRef.current) return;
+    setIsSpeaking(true);
+    const base64Audio = await geminiService.generateSpeech(text);
+    if (base64Audio) {
+      const audioBuffer = await decodeAudioData(decodeBase64(base64Audio), audioCtxRef.current);
+      const source = audioCtxRef.current.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioCtxRef.current.destination);
+      source.onended = () => setIsSpeaking(false);
+      source.start();
+    } else {
+      setIsSpeaking(false);
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      setTranscript('');
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => e.data.size > 0 && audioChunksRef.current.push(e.data);
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await sendVoiceMessage(audioBlob, transcript);
+        stream.getTracks().forEach(t => t.stop());
+      };
+
+      if (SpeechRecognition) {
+        const rec = new SpeechRecognition();
+        rec.lang = 'fr-FR';
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.onresult = (e: any) => {
+          let current = '';
+          for (let i = e.resultIndex; i < e.results.length; ++i) {
+            current += e.results[i][0].transcript;
+          }
+          setTranscript(current);
+        };
+        recognitionRef.current = rec;
+        rec.start();
+      }
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      alert("Micro inaccessible. Roland a dû pisser dessus.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (isRecording) {
+      mediaRecorderRef.current?.stop();
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const sendVoiceMessage = async (blob: Blob, text: string) => {
+    const content = text || "Un bruit sourd et pathétique";
+    handleMessageProcess(content, blob);
+  };
+
+  const handleSend = () => {
+    if (!input.trim() || isLoading) return;
+    handleMessageProcess(input);
+    setInput('');
+  };
+
+  const handleMessageProcess = async (text: string, audioBlob?: Blob) => {
+    setIsLoading(true);
+    const userMsg: Message = { id: Date.now().toString(), sender: Sender.USER, text: audioBlob ? `🎤 ${text}` : text, timestamp: new Date() };
+    setMessages(prev => [...prev, userMsg]);
+
+    const aiMsgId = (Date.now() + 1).toString();
+    setMessages(prev => [...prev, { id: aiMsgId, sender: Sender.AI, text: '', timestamp: new Date() }]);
+
+    try {
+      let audioData;
+      if (audioBlob) {
+        const reader = new FileReader();
+        const base64 = await new Promise<string>((res) => {
+          reader.onloadend = () => res((reader.result as string).split(',')[1]);
+          reader.readAsDataURL(audioBlob);
+        });
+        audioData = { data: base64, mimeType: 'audio/webm' };
+      }
+
+      let fullText = '';
+      await geminiService.sendMessage(text, (chunk) => {
+        fullText += chunk;
+        setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: fullText } : m));
+      }, audioData);
+
+      await playRolandVoice(fullText);
+    } catch (err) {
+      setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: "Erreur fatale. Roland est en PLS." } : m));
+    } finally {
+      setIsLoading(false);
+      setTranscript('');
+    }
+  };
+
+  const avatarUrl = "https://images.unsplash.com/photo-1544161515-4af6b1d8b159?q=80&w=2070&auto=format&fit=crop";
+
+  if (!isStarted) {
+    return (
+      <div className="h-[100dvh] bg-[#0c0a09] flex flex-col items-center justify-center p-6 text-center">
+        <div className="relative mb-12">
+          <div className="text-9xl animate-bounce">💩</div>
+        </div>
+        <h1 className="text-7xl font-black text-stone-100 mb-4 tracking-tighter" style={{ fontFamily: 'Creepster, cursive' }}> Roland Culé </h1>
+        <button onClick={handleStart} className="px-16 py-5 bg-stone-900 border border-stone-800 text-stone-100 font-black text-xl hover:bg-green-950 transition-all shadow-[6px_6px_0px_#1c1917] active:shadow-none active:translate-x-1 active:translate-y-1"> LANCER </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-[100dvh] max-w-3xl mx-auto border-x border-stone-800 dirty-gradient shadow-2xl relative overflow-hidden font-sans">
-      {/* Header */}
-      <header className="p-4 border-b border-stone-800 flex items-center justify-between bg-stone-900/80 backdrop-blur-md z-10">
-        <div className="flex items-center gap-3">
-          <div className="avatar-container w-14 h-14 bg-stone-800 rounded-full border-2 border-green-900/40 overflow-hidden relative shrink-0 shadow-[0_0_10px_rgba(0,0,0,0.5)]">
-             <img 
-              src={avatarUrl} 
-              alt="Roland Culé" 
-              className="avatar-sepia w-full h-full object-cover" 
-              onError={(e) => {
-                // Fallback to a placeholder if the local avatar.png isn't found yet
-                (e.target as HTMLImageElement).src = "https://picsum.photos/seed/roland/200";
-              }}
-            />
-             <div className="absolute inset-0 bg-green-900/10 mix-blend-color"></div>
+    <div className="flex flex-col h-[100dvh] max-w-2xl mx-auto bg-[#0c0a09] border-x border-stone-900 shadow-2xl overflow-hidden">
+      <header className="p-4 bg-stone-950 border-b border-stone-800 flex items-center justify-between z-20">
+        <div className="flex items-center gap-4">
+          <div className={`relative ${isSpeaking ? 'scale-110' : 'scale-100'} transition-transform duration-300`}>
+            <div className={`w-14 h-14 rounded-full overflow-hidden border-2 ${isSpeaking ? 'border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]' : 'border-green-900'} bg-stone-800`}>
+              <img src={avatarUrl} alt="Roland" className="w-full h-full object-cover grayscale" />
+            </div>
+            {isSpeaking && <div className="absolute -inset-1 border-2 border-green-500 rounded-full animate-ping opacity-20"></div>}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-stone-100 tracking-tighter leading-none" style={{ fontFamily: 'Creepster, cursive' }}>
-              ROLAND CULÉ
-            </h1>
-            <p className="text-[9px] text-green-600 font-black animate-pulse mt-1 tracking-[0.3em] uppercase">Statut : Infect & Précis</p>
+            <h1 className="text-2xl font-black text-stone-100 tracking-tighter" style={{ fontFamily: 'Creepster, cursive' }}>ROLAND CULÉ</h1>
+            <p className="text-[9px] text-green-700 font-bold uppercase">Humeur : Exécrable</p>
           </div>
         </div>
         <StinkLines />
       </header>
 
-      {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-stone-800 pb-8">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-[url('https://www.transparenttextures.com/patterns/dust.png')]">
         {messages.map((msg) => (
-          <div 
-            key={msg.id} 
-            className={`flex ${msg.sender === Sender.USER ? 'justify-end' : 'justify-start'}`}
-          >
-            <div 
-              className={`max-w-[88%] p-3.5 border ${
-                msg.sender === Sender.USER 
-                  ? 'bg-stone-800 border-stone-700 text-stone-200' 
-                  : 'bg-stone-950/90 border-stone-800 text-stone-50 toxic-glow'
-              } shadow-xl rounded-sm`}
-            >
-              {msg.sender === Sender.AI && (
-                <div className="text-[10px] uppercase font-black text-stone-600 mb-1.5 border-b border-stone-900 pb-1 tracking-widest flex justify-between items-center">
-                  <span>Roland</span>
-                  <span className="text-[8px] text-green-900/50">● EN LIGNE</span>
-                </div>
-              )}
-              <div className="whitespace-pre-wrap leading-relaxed text-[15px] font-medium tracking-tight">
-                {msg.text || (isLoading && msg.sender === Sender.AI ? '...' : '')}
-              </div>
-              <div className="mt-2 text-[9px] text-stone-700 text-right font-bold tabular-nums">
-                {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </div>
+          <div key={msg.id} className={`flex ${msg.sender === Sender.USER ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[85%] p-4 rounded-sm border ${msg.sender === Sender.USER ? 'bg-stone-900 border-stone-800 text-stone-300' : 'bg-stone-950 border-green-900/20 text-stone-100'}`}>
+              {msg.sender === Sender.AI && <div className="text-[9px] font-black text-stone-700 uppercase mb-2 border-b border-stone-900/50 pb-1">ROLAND 🍺</div>}
+              <div className={`text-[15px] leading-relaxed whitespace-pre-wrap ${msg.sender === Sender.AI ? 'italic' : ''}`}>{msg.text || "Roland bave..."}</div>
             </div>
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="p-4 bg-stone-900/90 border-t border-stone-800 z-10 pb-safe backdrop-blur-sm">
-        <div className="flex gap-2 bg-stone-950 border border-stone-800 p-1.5 focus-within:border-green-900/50 transition-colors rounded-md shadow-2xl">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Parle à mon cul, ma tête est malade..."
-            className="flex-1 bg-transparent border-none outline-none text-stone-100 px-2 py-1 text-base placeholder:text-stone-800"
-            style={{ fontSize: '16px' }}
-          />
+      <div className="p-4 bg-stone-950 border-t border-stone-900">
+        <div className="flex gap-2 items-center bg-stone-900 p-1 border border-stone-800">
           <button
-            onClick={handleSend}
-            disabled={isLoading || !input.trim()}
-            className="px-5 py-2 bg-stone-800 hover:bg-stone-700 active:scale-95 disabled:bg-stone-900 disabled:text-stone-900 text-stone-400 font-bold text-xs border border-stone-700 transition-all uppercase rounded-sm"
+            onMouseDown={startRecording} onMouseUp={stopRecording} onMouseLeave={stopRecording}
+            onTouchStart={(e) => { e.preventDefault(); startRecording(); }} onTouchEnd={(e) => { e.preventDefault(); stopRecording(); }}
+            className={`p-3 rounded-sm transition-all ${isRecording ? 'bg-red-900 text-red-200 animate-pulse' : 'bg-stone-800 text-stone-500'}`}
           >
-            {isLoading ? '...' : 'Cracher'}
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
           </button>
+          <input
+            type="text" value={isRecording ? transcript : input} onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            placeholder={isRecording ? "Roland t'écoute..." : "Pose ta question inutile..."}
+            className="flex-1 bg-transparent border-none outline-none text-stone-200 px-3 py-2 text-sm"
+          />
+          <button onClick={handleSend} disabled={isLoading} className="bg-stone-800 text-stone-500 px-5 py-2 text-[10px] font-black uppercase">ENVOYER</button>
         </div>
-        <p className="text-[8px] text-stone-800 mt-2 text-center uppercase tracking-[0.4em] font-bold">
-          Dernière douche : Janvier 2022
-        </p>
+        {isRecording && <div className="text-[10px] text-red-700 font-bold uppercase mt-2 text-center animate-pulse"> {transcript || "Parle, déchet..."} </div>}
       </div>
-
-      {/* Overlay background effects */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.04] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
-      <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]"></div>
     </div>
   );
 };

@@ -1,5 +1,7 @@
 {
   "name": "Roland Culé",
   "description": "L'IA la plus détestable et malodorante du web. Roland Culé vous méprise, mais il répond à vos questions avec une précision chirurgicale.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }
