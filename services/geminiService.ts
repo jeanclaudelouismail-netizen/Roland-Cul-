@@ -21,11 +21,10 @@ Les réponses de l’IA sont très courtes, précises et chirurgicalement effica
 `;
 
 export class GeminiService {
-  private ai: GoogleGenAI;
   private history: Content[] = [];
 
-  constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  private get ai() {
+    return new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   }
 
   async sendMessage(
@@ -66,30 +65,36 @@ export class GeminiService {
       return fullText;
     } catch (error) {
       console.error("Gemini Error:", error);
-      return "Ta gueule, le serveur a fait un coma éthylique.";
+      return "Ta gueule, le serveur a fait un coma éthylique. Reviens quand tu seras moins moche.";
     }
   }
 
   async generateSpeech(text: string): Promise<string | undefined> {
     try {
-      // On insiste sur le côté grave, roque et rapide. 
-      // L'utilisation de termes comme "voix d'outre-tombe" ou "caverneuse" aide à baisser le pitch perçu.
+      // On augmente la limite à 1000 caractères pour éviter les coupures prématurées.
+      // Roland est censé être court, donc 1000 est largement suffisant.
+      const cleanedText = text.replace(/[*_#]/g, ''); // On enlève le markdown pour un TTS plus propre
+      const truncatedText = cleanedText.length > 1000 ? cleanedText.substring(0, 1000) + "..." : cleanedText;
+      
       const response = await this.ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text: `Parle TRÈS VITE avec une voix TRÈS GRAVE, caverneuse, roque, éméchée et extrêmement méprisante. D'un ton sec et bas : ${text}` }] }],
+        contents: [{ parts: [{ text: `Parle d'une voix éméchée, grave et méprisante : ${truncatedText}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
             voiceConfig: {
-              // Fenrir a généralement un timbre plus bas et plus imposant que Puck.
               prebuiltVoiceConfig: { voiceName: 'Fenrir' },
             },
           },
         },
       });
       return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    } catch (error) {
-      console.error("TTS Error:", error);
+    } catch (error: any) {
+      if (error?.status === 429 || error?.message?.includes('quota')) {
+        console.warn("TTS Quota exhausted. Roland restera muet.");
+      } else {
+        console.error("TTS Error:", error);
+      }
       return undefined;
     }
   }

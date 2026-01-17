@@ -6,22 +6,34 @@ import { StinkLines } from './components/StinkLines';
 
 // Audio decoding helpers
 function decodeBase64(base64: string) {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
+  try {
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+  } catch (e) {
+    console.error("Base64 decoding failed", e);
+    return new Uint8Array(0);
   }
-  return bytes;
 }
 
-async function decodeAudioData(data: Uint8Array, ctx: AudioContext): Promise<AudioBuffer> {
-  const dataInt16 = new Int16Array(data.buffer);
-  const buffer = ctx.createBuffer(1, dataInt16.length, 24000);
-  const channelData = buffer.getChannelData(0);
-  for (let i = 0; i < dataInt16.length; i++) {
-    channelData[i] = dataInt16[i] / 32768.0;
+async function decodeAudioData(data: Uint8Array, ctx: AudioContext): Promise<AudioBuffer | null> {
+  if (data.length === 0) return null;
+  try {
+    // Utilisation sécurisée de l'offset et de la longueur pour Int16Array
+    const dataInt16 = new Int16Array(data.buffer, data.byteOffset, data.byteLength / 2);
+    const buffer = ctx.createBuffer(1, dataInt16.length, 24000);
+    const channelData = buffer.getChannelData(0);
+    for (let i = 0; i < dataInt16.length; i++) {
+      channelData[i] = dataInt16[i] / 32768.0;
+    }
+    return buffer;
+  } catch (e) {
+    console.error("Audio decoding failed", e);
+    return null;
   }
-  return buffer;
 }
 
 const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -41,9 +53,11 @@ const App: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [hasVoiceError, setHasVoiceError] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recognitionRef = useRef<any>(null);
@@ -53,22 +67,51 @@ const App: React.FC = () => {
   }, [messages]);
 
   const handleStart = () => {
-    audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
     setIsStarted(true);
   };
 
   const playRolandVoice = async (text: string) => {
     if (!audioCtxRef.current || !text) return;
+    
+    // Resume context if suspended (browser security)
+    if (audioCtxRef.current.state === 'suspended') {
+      await audioCtxRef.current.resume();
+    }
+
+    if (hasVoiceError) return;
+
+    // Arrêter la voix en cours si Roland parle déjà
+    if (currentSourceRef.current) {
+      try { currentSourceRef.current.stop(); } catch(e) {}
+    }
+
     setIsSpeaking(true);
-    const base64Audio = await geminiService.generateSpeech(text);
-    if (base64Audio) {
-      const audioBuffer = await decodeAudioData(decodeBase64(base64Audio), audioCtxRef.current);
-      const source = audioCtxRef.current.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioCtxRef.current.destination);
-      source.onended = () => setIsSpeaking(false);
-      source.start();
-    } else {
+    try {
+      const base64Audio = await geminiService.generateSpeech(text);
+      if (base64Audio) {
+        const decoded = decodeBase64(base64Audio);
+        const audioBuffer = await decodeAudioData(decoded, audioCtxRef.current);
+        if (audioBuffer) {
+          const source = audioCtxRef.current.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(audioCtxRef.current.destination);
+          source.onended = () => {
+            setIsSpeaking(false);
+            currentSourceRef.current = null;
+          };
+          currentSourceRef.current = source;
+          source.start();
+        } else {
+          setIsSpeaking(false);
+        }
+      } else {
+        setHasVoiceError(true);
+        setIsSpeaking(false);
+        setTimeout(() => setHasVoiceError(false), 60000);
+      }
+    } catch (err) {
+      console.error("Voice playback failed", err);
       setIsSpeaking(false);
     }
   };
@@ -177,6 +220,7 @@ const App: React.FC = () => {
           <div className="text-9xl animate-bounce">💩</div>
         </div>
         <h1 className="text-7xl font-black text-stone-100 mb-4 tracking-tighter" style={{ fontFamily: 'Creepster, cursive' }}> Roland Culé </h1>
+        <p className="text-stone-500 mb-8 max-w-md italic font-serif">L'IA qui vous méprise plus que votre propre miroir.</p>
         <button onClick={handleStart} className="px-16 py-5 bg-stone-900 border border-stone-800 text-stone-100 font-black text-xl hover:bg-green-950 transition-all shadow-[6px_6px_0px_#1c1917] active:shadow-none active:translate-x-1 active:translate-y-1"> LANCER </button>
       </div>
     );
@@ -201,7 +245,10 @@ const App: React.FC = () => {
               <p className="text-[9px] text-green-700 font-bold uppercase">Lieu : Son Taudis</p>
             </div>
           </div>
-          <StinkLines />
+          <div className="flex flex-col items-end gap-1">
+             <StinkLines />
+             {hasVoiceError && <span className="text-[8px] text-red-900 font-bold animate-pulse">VOIX ÉPUISÉE (QUOTA)</span>}
+          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-[url('https://www.transparenttextures.com/patterns/dust.png')] custom-scrollbar">
@@ -237,6 +284,7 @@ const App: React.FC = () => {
               onMouseDown={startRecording} onMouseUp={stopRecording} onMouseLeave={stopRecording}
               onTouchStart={(e) => { e.preventDefault(); startRecording(); }} onTouchEnd={(e) => { e.preventDefault(); stopRecording(); }}
               className={`p-3 rounded-sm transition-all ${isRecording ? 'bg-red-900 text-red-200 animate-pulse' : 'bg-stone-800 text-stone-500'}`}
+              title="Maintenir pour parler"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
             </button>
@@ -246,7 +294,7 @@ const App: React.FC = () => {
               placeholder={isRecording ? "Roland t'écoute..." : "Pose ta question inutile..."}
               className="flex-1 bg-transparent border-none outline-none text-stone-200 px-3 py-2 text-sm"
             />
-            <button onClick={handleSend} disabled={isLoading} className="bg-stone-800 text-stone-500 px-5 py-2 text-[10px] font-black uppercase">ENVOYER</button>
+            <button onClick={handleSend} disabled={isLoading} className="bg-stone-800 text-stone-500 px-5 py-2 text-[10px] font-black uppercase hover:bg-stone-700 hover:text-stone-300">ENVOYER</button>
           </div>
           {isRecording && <div className="text-[10px] text-red-700 font-bold uppercase mt-2 text-center animate-pulse"> {transcript || "Parle, déchet..."} </div>}
         </div>
