@@ -22,7 +22,6 @@ function decodeBase64(base64: string) {
 async function decodeAudioData(data: Uint8Array, ctx: AudioContext): Promise<AudioBuffer | null> {
   if (data.length === 0) return null;
   try {
-    // Utilisation sécurisée de l'offset et de la longueur pour Int16Array
     const dataInt16 = new Int16Array(data.buffer, data.byteOffset, data.byteLength / 2);
     const buffer = ctx.createBuffer(1, dataInt16.length, 24000);
     const channelData = buffer.getChannelData(0);
@@ -44,7 +43,7 @@ const App: React.FC = () => {
     {
       id: 'init',
       sender: Sender.AI,
-      text: "Qu'est-ce que tu me veux encore, face de rat ? Tu viens admirer mon génie ou tu cherches juste à te faire humilier ? Je suis Roland Culé, et ton existence est une erreur de la nature. *Rote violemment*",
+      text: "Vazy vazy, mange tes morts mon coushin ! C'est Roland Culé, le Tuche Daddy en personne ! Tu m'veux quoi avec ta sale gueule de gadjo ? J'cause vite parce que j'suis plein de bière et d'frites, et j'ai pas ton temps, sale merdeux. Cause avant qu'j'te crache dessus... vazy vazy !",
       timestamp: new Date()
     }
   ]);
@@ -74,14 +73,12 @@ const App: React.FC = () => {
   const playRolandVoice = async (text: string) => {
     if (!audioCtxRef.current || !text) return;
     
-    // Resume context if suspended (browser security)
     if (audioCtxRef.current.state === 'suspended') {
       await audioCtxRef.current.resume();
     }
 
     if (hasVoiceError) return;
 
-    // Arrêter la voix en cours si Roland parle déjà
     if (currentSourceRef.current) {
       try { currentSourceRef.current.stop(); } catch(e) {}
     }
@@ -150,7 +147,7 @@ const App: React.FC = () => {
       mediaRecorder.start();
       setIsRecording(true);
     } catch (err) {
-      alert("Micro inaccessible. Roland a dû pisser dessus.");
+      alert("Ton micro est aussi pété que toi, gadjo !");
     }
   };
 
@@ -163,7 +160,7 @@ const App: React.FC = () => {
   };
 
   const sendVoiceMessage = async (blob: Blob, text: string) => {
-    const content = text || "Un bruit sourd et pathétique";
+    const content = text || "Un bruit de merde";
     handleMessageProcess(content, blob);
   };
 
@@ -200,7 +197,7 @@ const App: React.FC = () => {
 
       await playRolandVoice(fullText);
     } catch (err) {
-      setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: "Erreur fatale. Roland est en PLS." } : m));
+      setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: "Mange tes morts, l'serveur est HS. C'est sûrement ta faute." } : m));
     } finally {
       setIsLoading(false);
       setTranscript('');
@@ -217,11 +214,11 @@ const App: React.FC = () => {
         style={{ backgroundImage: `linear-gradient(rgba(12, 10, 9, 0.9), rgba(12, 10, 9, 0.9)), url(${bgUrl})` }}
       >
         <div className="relative mb-12">
-          <div className="text-9xl animate-bounce">💩</div>
+          <div className="text-9xl animate-bounce">🍺🖕🍟</div>
         </div>
         <h1 className="text-7xl font-black text-stone-100 mb-4 tracking-tighter" style={{ fontFamily: 'Creepster, cursive' }}> Roland Culé </h1>
-        <p className="text-stone-500 mb-8 max-w-md italic font-serif">L'IA qui vous méprise plus que votre propre miroir.</p>
-        <button onClick={handleStart} className="px-16 py-5 bg-stone-900 border border-stone-800 text-stone-100 font-black text-xl hover:bg-green-950 transition-all shadow-[6px_6px_0px_#1c1917] active:shadow-none active:translate-x-1 active:translate-y-1"> LANCER </button>
+        <p className="text-stone-500 mb-8 max-w-md italic font-serif">"L'insulte est un art, et t'es ma toile, sale merdeux."</p>
+        <button onClick={handleStart} className="px-16 py-5 bg-stone-900 border border-stone-800 text-stone-100 font-black text-xl hover:bg-yellow-600 transition-all shadow-[6px_6px_0px_#1c1917] active:shadow-none active:translate-x-1 active:translate-y-1"> VIENS T'FAIRE INSULTER </button>
       </div>
     );
   }
@@ -235,33 +232,33 @@ const App: React.FC = () => {
         <header className="p-4 bg-stone-950/95 border-b border-stone-800 flex items-center justify-between z-20">
           <div className="flex items-center gap-4">
             <div className={`relative ${isSpeaking ? 'scale-110' : 'scale-100'} transition-transform duration-300`}>
-              <div className={`w-14 h-14 rounded-full overflow-hidden border-2 ${isSpeaking ? 'border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]' : 'border-green-900'} bg-stone-800`}>
-                <img src={avatarUrl} alt="Roland" className="w-full h-full object-cover grayscale" />
+              <div className={`w-14 h-14 rounded-full overflow-hidden border-2 ${isSpeaking ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.5)]' : 'border-stone-800'} bg-stone-800`}>
+                <img src={avatarUrl} alt="Roland" className="w-full h-full object-cover grayscale opacity-80" />
               </div>
-              {isSpeaking && <div className="absolute -inset-1 border-2 border-green-500 rounded-full animate-ping opacity-20"></div>}
+              {isSpeaking && <div className="absolute -inset-1 border-2 border-yellow-500 rounded-full animate-ping opacity-20"></div>}
             </div>
             <div>
               <h1 className="text-2xl font-black text-stone-100 tracking-tighter" style={{ fontFamily: 'Creepster, cursive' }}>ROLAND CULÉ</h1>
-              <p className="text-[9px] text-green-700 font-bold uppercase">Lieu : Son Taudis</p>
+              <p className="text-[9px] text-yellow-700 font-bold uppercase">Lieu : Bouzolles - Caravane insalubre</p>
             </div>
           </div>
           <div className="flex flex-col items-end gap-1">
              <StinkLines />
-             {hasVoiceError && <span className="text-[8px] text-red-900 font-bold animate-pulse">VOIX ÉPUISÉE (QUOTA)</span>}
+             {hasVoiceError && <span className="text-[8px] text-red-900 font-bold animate-pulse">PLUS D'VOIX MON COUSHIN</span>}
           </div>
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-[url('https://www.transparenttextures.com/patterns/dust.png')] custom-scrollbar">
           {messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.sender === Sender.USER ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] p-4 rounded-sm border ${msg.sender === Sender.USER ? 'bg-stone-900/80 border-stone-800 text-stone-300' : 'bg-stone-950/80 border-green-900/20 text-stone-100 shadow-lg'}`}>
+              <div className={`max-w-[85%] p-4 rounded-sm border ${msg.sender === Sender.USER ? 'bg-stone-900/80 border-stone-800 text-stone-300' : 'bg-stone-950/80 border-yellow-900/10 text-stone-100 shadow-lg'}`}>
                 {msg.sender === Sender.AI && (
                   <div className="flex justify-between items-center mb-2 border-b border-stone-900/50 pb-1">
-                    <div className="text-[9px] font-black text-stone-700 uppercase">ROLAND 🍺</div>
+                    <div className="text-[9px] font-black text-stone-700 uppercase">ROLAND L'ABJECT 🍟</div>
                     <button 
                       onClick={() => playRolandVoice(msg.text)}
-                      className="text-stone-700 hover:text-stone-400 transition-colors p-1"
-                      title="Réécouter cette insulte"
+                      className="text-stone-700 hover:text-yellow-600 transition-colors p-1"
+                      title="Réécoute mon mépris"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
@@ -271,7 +268,7 @@ const App: React.FC = () => {
                     </button>
                   </div>
                 )}
-                <div className={`text-[15px] leading-relaxed whitespace-pre-wrap ${msg.sender === Sender.AI ? 'italic' : ''}`}>{msg.text || "Roland bave..."}</div>
+                <div className={`text-[15px] leading-relaxed whitespace-pre-wrap ${msg.sender === Sender.AI ? 'italic text-yellow-50/90 font-medium' : ''}`}>{msg.text || "Il cherche une canette pour t'la lancer..."}</div>
               </div>
             </div>
           ))}
@@ -284,19 +281,19 @@ const App: React.FC = () => {
               onMouseDown={startRecording} onMouseUp={stopRecording} onMouseLeave={stopRecording}
               onTouchStart={(e) => { e.preventDefault(); startRecording(); }} onTouchEnd={(e) => { e.preventDefault(); stopRecording(); }}
               className={`p-3 rounded-sm transition-all ${isRecording ? 'bg-red-900 text-red-200 animate-pulse' : 'bg-stone-800 text-stone-500'}`}
-              title="Maintenir pour parler"
+              title="Gueule au coushin"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
             </button>
             <input
               type="text" value={isRecording ? transcript : input} onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={isRecording ? "Roland t'écoute..." : "Pose ta question inutile..."}
+              placeholder={isRecording ? "Cause mon coushin..." : "Dis une connerie, gadjo..."}
               className="flex-1 bg-transparent border-none outline-none text-stone-200 px-3 py-2 text-sm"
             />
-            <button onClick={handleSend} disabled={isLoading} className="bg-stone-800 text-stone-500 px-5 py-2 text-[10px] font-black uppercase hover:bg-stone-700 hover:text-stone-300">ENVOYER</button>
+            <button onClick={handleSend} disabled={isLoading} className="bg-stone-800 text-stone-500 px-5 py-2 text-[10px] font-black uppercase hover:bg-yellow-900 hover:text-yellow-100 transition-colors">V-VAZY</button>
           </div>
-          {isRecording && <div className="text-[10px] text-red-700 font-bold uppercase mt-2 text-center animate-pulse"> {transcript || "Parle, déchet..."} </div>}
+          {isRecording && <div className="text-[10px] text-yellow-700 font-bold uppercase mt-2 text-center animate-pulse"> {transcript || "On t'écoute coushin..."} </div>}
         </div>
       </div>
     </div>
